@@ -5,7 +5,7 @@ import {
   getOutgoingRequests, 
   updateRequestStatus,
   getConnections 
-} from '../controllers/requestController.js';
+} from '../controllers/requestcontroller.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
