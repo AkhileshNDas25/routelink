@@ -9,6 +9,8 @@ const ChatWindow = ({ chatId, otherUser }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [socket, setSocket] = useState(null);
+  const [socketStatus, setSocketStatus] = useState('disconnected'); // disconnected | connecting | connected | error
+  const [activeSockets, setActiveSockets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
@@ -23,6 +25,9 @@ const ChatWindow = ({ chatId, otherUser }) => {
   }, [messages]);
 
   useEffect(() => {
+    // Wait until user is available
+    if (!user || !user._id) return;
+
     // Fetch existing messages
     const fetchMessages = async () => {
       setLoading(true);
@@ -40,11 +45,13 @@ const ChatWindow = ({ chatId, otherUser }) => {
 
     // Setup socket connection
     const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    setSocketStatus('connecting');
     const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 5,
+      withCredentials: true
     });
 
     socketRef.current = newSocket;
@@ -52,6 +59,7 @@ const ChatWindow = ({ chatId, otherUser }) => {
 
     // Join with user ID
     newSocket.on('connect', () => {
+      setSocketStatus('connected');
       console.log('Socket connected:', newSocket.id);
       newSocket.emit('join', user._id);
     });
@@ -71,15 +79,40 @@ const ChatWindow = ({ chatId, otherUser }) => {
     });
 
     newSocket.on('connect_error', (error) => {
+      setSocketStatus('error');
       console.error('Socket connection error:', error);
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      setSocketStatus('disconnected');
+      console.warn('Socket disconnected:', reason);
+    });
+
+    newSocket.on('reconnect_attempt', (attempt) => {
+      setSocketStatus('connecting');
+      console.log('Socket reconnect attempt:', attempt);
     });
 
     // Cleanup on unmount
     return () => {
       console.log('Disconnecting socket');
-      newSocket.disconnect();
+      try {
+        newSocket.disconnect();
+      } catch (e) {
+        console.warn('Error while disconnecting socket', e);
+      }
     };
-  }, [chatId, user._id]);
+  }, [chatId, user]);
+
+  // Debug helper: fetch active sockets from server
+  const fetchActiveSockets = async () => {
+    try {
+      const { data } = await api.get('/socket/active');
+      setActiveSockets(data.active || []);
+    } catch (err) {
+      console.error('Failed to fetch active sockets:', err);
+    }
+  };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -159,15 +192,32 @@ const ChatWindow = ({ chatId, otherUser }) => {
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
-      <div className="bg-white border-b p-4 flex items-center space-x-3 shadow-sm">
-        <img
-          src={otherUser.profilePic}
-          alt={otherUser.name}
-          className="w-12 h-12 rounded-full"
-        />
-        <div>
-          <p className="font-semibold text-gray-800">{otherUser.name}</p>
-          <p className="text-xs text-gray-500">{otherUser.email}</p>
+      <div className="bg-white border-b p-4 flex items-center justify-between space-x-3 shadow-sm">
+        <div className="flex items-center space-x-3">
+          <img
+            src={otherUser.profilePic}
+            alt={otherUser.name}
+            className="w-12 h-12 rounded-full"
+          />
+          <div>
+            <p className="font-semibold text-gray-800">{otherUser.name}</p>
+            <p className="text-xs text-gray-500">{otherUser.email}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          <div className={`px-3 py-1 rounded-full text-xs font-medium ${socketStatus === 'connected' ? 'bg-green-100 text-green-700' : socketStatus === 'connecting' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+            {socketStatus === 'connected' ? 'Connected' : socketStatus === 'connecting' ? 'Connecting' : socketStatus === 'error' ? 'Error' : 'Disconnected'}
+            {socketRef.current?.id ? ` • ${socketRef.current.id.substring(0,6)}` : ''}
+          </div>
+
+          <button
+            type="button"
+            onClick={fetchActiveSockets}
+            className="text-sm bg-gray-50 border px-3 py-1 rounded-md hover:bg-gray-100"
+          >
+            Active: {activeSockets.length}
+          </button>
         </div>
       </div>
 
