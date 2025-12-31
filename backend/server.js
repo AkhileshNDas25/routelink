@@ -94,19 +94,22 @@ app.get('/api/health', (req, res) => {
 });
 
 // Socket.io connection handling
-const activeUsers = new Map();
+import { setIo, addActiveUser, removeActiveUserBySocketId, getSocketId, listActiveUsers } from './utils/socket.js';
+
+setIo(io);
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   socket.on('join', (userId) => {
-    activeUsers.set(userId, socket.id);
+    addActiveUser(userId, socket.id);
     console.log(`User ${userId} joined with socket ${socket.id}`);
   });
 
   socket.on('sendMessage', (data) => {
     const { receiverId, message, senderId, chatId } = data;
-    const receiverSocketId = activeUsers.get(receiverId);
+    console.log('socket sendMessage:', { senderId, receiverId, chatId });
+    const receiverSocketId = getSocketId(receiverId);
     
     if (receiverSocketId) {
       io.to(receiverSocketId).emit('receiveMessage', {
@@ -115,12 +118,15 @@ io.on('connection', (socket) => {
         chatId,
         timestamp: new Date()
       });
+      console.log('Message emitted to socket:', receiverSocketId);
+    } else {
+      console.log('Receiver not connected, socket id not found:', receiverId);
     }
   });
 
   socket.on('requestUpdate', (data) => {
     const { receiverId, status, requestId } = data;
-    const receiverSocketId = activeUsers.get(receiverId);
+    const receiverSocketId = getSocketId(receiverId);
     
     if (receiverSocketId) {
       io.to(receiverSocketId).emit('requestStatusChanged', {
@@ -131,14 +137,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    for (const [userId, socketId] of activeUsers.entries()) {
-      if (socketId === socket.id) {
-        activeUsers.delete(userId);
-        console.log(`User ${userId} disconnected`);
-        break;
-      }
-    }
+    const userId = removeActiveUserBySocketId(socket.id);
+    if (userId) console.log(`User ${userId} disconnected`);
   });
+});
+
+// Debug endpoint to list currently active users
+app.get('/api/socket/active', (req, res) => {
+  res.json({ active: listActiveUsers() });
 });
 
 const PORT = process.env.PORT || 5000;

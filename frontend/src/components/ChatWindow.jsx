@@ -41,6 +41,8 @@ const ChatWindow = ({ chatId, otherUser }) => {
 
     newSocket.on('connect', () => console.log('Socket connected:', newSocket.id));
     newSocket.on('connect_error', (err) => console.error('Socket connect error:', err));
+    newSocket.on('disconnect', (reason) => console.warn('Socket disconnected:', reason));
+    newSocket.on('reconnect_attempt', (attempt) => console.log('Socket reconnect attempt:', attempt));
 
     newSocket.emit('join', user._id);
 

@@ -18,8 +18,29 @@ export const sendMessage = async (req, res) => {
       .populate('senderId', 'name profilePic')
       .populate('receiverId', 'name profilePic');
 
+    // Try sending message over socket if recipient is connected
+    try {
+      const { getIo, getSocketId } = await import('../utils/socket.js');
+      const io = getIo?.();
+      const receiverSocketId = getSocketId?.(receiverId);
+      if (io && receiverSocketId) {
+        io.to(receiverSocketId).emit('receiveMessage', {
+          senderId: req.user._id,
+          message,
+          chatId,
+          timestamp: new Date(),
+        });
+        console.log('Server emitted message to', receiverSocketId);
+      } else {
+        console.log('Server could not emit message - receiver offline or io not ready');
+      }
+    } catch (emitErr) {
+      console.error('Error emitting message via socket:', emitErr);
+    }
+
     res.status(201).json(populatedMessage);
   } catch (error) {
+    console.error('sendMessage error:', error);
     res.status(500).json({ message: error.message });
   }
 };
