@@ -24,6 +24,7 @@ export const getRoutes = async (req, res) => {
 
     res.json(routes);
   } catch (error) {
+    console.error('getRoutes error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -49,6 +50,7 @@ export const createRoute = async (req, res) => {
 
     res.status(201).json(populatedRoute);
   } catch (error) {
+    console.error('createRoute error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -64,6 +66,7 @@ export const getMyRoutes = async (req, res) => {
 
     res.json(routes);
   } catch (error) {
+    console.error('getMyRoutes error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -88,6 +91,7 @@ export const updateRouteStatus = async (req, res) => {
 
     res.json(route);
   } catch (error) {
+    console.error('updateRouteStatus error:', error);
     res.status(500).json({ message: error.message });
   }
 };

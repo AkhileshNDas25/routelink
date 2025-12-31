@@ -15,13 +15,15 @@ const ChatWindow = ({ chatId, otherUser }) => {
   };
 
   useEffect(() => {
+    if (!user || !user._id) return; // wait for auth
+
     // Fetch existing messages
     const fetchMessages = async () => {
       try {
         const { data } = await api.get(`/messages/${chatId}`);
         setMessages(data);
       } catch (error) {
-        console.error('Failed to fetch messages');
+        console.error('Failed to fetch messages', error);
       }
     };
 
@@ -51,7 +53,7 @@ const ChatWindow = ({ chatId, otherUser }) => {
     return () => {
       newSocket.disconnect();
     };
-  }, [chatId, user._id]);
+  }, [chatId, user]);
 
   useEffect(() => {
     scrollToBottom();

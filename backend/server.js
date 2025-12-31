@@ -2,6 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import morgan from 'morgan';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import connectDB from './config/db.js';
@@ -19,8 +20,9 @@ const httpServer = createServer(app);
 // Socket.io setup with CORS
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    methods: ['GET', 'POST']
+    origin: [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:5173'],
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
@@ -35,8 +37,20 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging for diagnostics
+app.use(morgan('combined'));
+app.use('/api', (req, res, next) => {
+  console.log(`[API] ${req.method} ${req.originalUrl} - origin: ${req.headers.origin}`);
+  next();
+});
+
 // Connect to MongoDB
 connectDB();
+
+// Lightweight test endpoint for routes availability
+app.get('/api/routes/test', (req, res) => {
+  res.json({ ok: true, message: 'Routes endpoint reachable' });
+});
 
 // Test user endpoint (add this BEFORE routes)
 app.get('/api/create-test-user', async (req, res) => {
