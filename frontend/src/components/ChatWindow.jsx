@@ -29,8 +29,16 @@ const ChatWindow = ({ chatId, otherUser }) => {
 
     // Setup socket connection
     const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
-    const newSocket = io(socketUrl);
+    const newSocket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      secure: socketUrl.startsWith('https'),
+      withCredentials: true,
+      reconnectionAttempts: 5,
+    });
     setSocket(newSocket);
+
+    newSocket.on('connect', () => console.log('Socket connected:', newSocket.id));
+    newSocket.on('connect_error', (err) => console.error('Socket connect error:', err));
 
     newSocket.emit('join', user._id);
 
