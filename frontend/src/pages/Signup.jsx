@@ -48,7 +48,7 @@ const Signup = () => {
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Create Account</h1>
-          <p className="text-gray-600">Join OnTheWay today</p>
+          <p className="text-gray-600">Join RouteLink today</p> 
         </div>
 
         {error && (
